@@ -2,14 +2,14 @@
     "linkable": true,
     "random_nonce": false,
     "use_platform_service": false,
-    "spid": "",
-    "primary_subscription_key": "",
-    "secondary_subscription_key": "",
+    "spid": "AE56B8A35B153FB58385794C82A633B3",
+    "primary_subscription_key": "11542a5817c54018b22c0a925982afec",
+    "secondary_subscription_key": "424ee79762754c99a9dca4f250e98975",
     "quote_trust_options": [
         "GROUP_OUT_OF_DATE",
         "CONFIGURATION_NEEDED"
     ],
     "sp_private_key_pem_path": "examples/data/sp-keys/private_key.pem",
-    "ias_root_cert_pem_path": "examples/data/Intel_SGX_Attestation_RootCA.pem",
-    "sigstruct_path": "../ra-enclave/target/x86_64-fortanix-unknown-sgx/debug/examples/tls-enclave.sig"
+    "ias_root_cert_pem_path": "examples/data/sp-keys/Intel_SGX_Attestation_RootCA.pem",
+    "sigstruct_path": "../ra-enclave/target/x86_64-fortanix-unknown-sgx/release/examples/tls-enclave.sig"
 }

@@ -1,5 +1,6 @@
 TARGET_NAME=tls-enclave
-TARGET_DIR=ra-enclave/target/x86_64-fortanix-unknown-sgx/debug/examples
+# FIXME: using --release to work around linker errors due to "compressed sections"
+TARGET_DIR=ra-enclave/target/x86_64-fortanix-unknown-sgx/release/examples
 TARGET=$TARGET_DIR/$TARGET_NAME.sgxs
 
 # Run enclave with the default runner
