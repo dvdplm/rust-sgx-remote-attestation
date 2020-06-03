@@ -2,9 +2,9 @@
     "linkable": true,
     "random_nonce": false,
     "use_platform_service": false,
-    "spid": "AE56B8A35B153FB58385794C82A633B3",
-    "primary_subscription_key": "11542a5817c54018b22c0a925982afec",
-    "secondary_subscription_key": "424ee79762754c99a9dca4f250e98975",
+    "spid": "",
+    "primary_subscription_key": "",
+    "secondary_subscription_key": "",
     "quote_trust_options": [
         "GROUP_OUT_OF_DATE",
         "CONFIGURATION_NEEDED"
