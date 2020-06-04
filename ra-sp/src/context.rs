@@ -166,10 +166,10 @@ impl<'a> SpRaContext<'a> {
         self.g_a = Some(msg1.g_a.clone());
 
         let spid: Spid = hex::decode(&self.config.spid)
-            .unwrap()
+            .expect("decoding SPID")
             .as_slice()
             .try_into()
-            .unwrap();
+            .expect("slice of bytes to Spid (aka [u8; 16])");
         let quote_type = self.config.linkable as u16;
 
         Ok(RaMsg2::new(

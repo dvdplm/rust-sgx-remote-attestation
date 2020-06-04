@@ -1,6 +1,6 @@
 use crate::error::ClientRaError;
 use crate::ClientRaResult;
-use aesm_client::{AesmClient, QuoteInfo};
+use aesm_client::{AesmClient, QuoteInfo, QuoteType};
 use ra_common::msg::{Gid, Quote, RaMsg0, RaMsg1, RaMsg2, RaMsg3, RaMsg4};
 use sgx_crypto::cmac::MacTag;
 use sgx_crypto::key_exchange::DHKEPublicKey;
@@ -95,7 +95,10 @@ impl ClientRaContext {
 
     pub fn get_msg_1(&mut self, enclave_stream: &mut (impl Read + Write)) -> RaMsg1 {
         let g_a: DHKEPublicKey = bincode::deserialize_from(enclave_stream).unwrap();
-        let gid: Gid = self.quote_info.gid().try_into().unwrap();
+
+        let gid = self.quote_info.gid();
+        assert_eq!(gid.len(), 4);
+        let gid: Gid = gid.as_slice().try_into().expect("vec of length 4");
         self.g_a = Some(g_a.clone());
         RaMsg1 { gid, g_a }
     }
@@ -143,7 +146,7 @@ impl ClientRaContext {
         enclave_stream.read_exact(&mut report[..]).unwrap();
 
         // Get a quote and QE report from QE and send them to enclave
-        let _quote = aesm_client.get_quote(&quote_info, report, spid, sig_rl)?;
+        let _quote = aesm_client.get_quote(report, spid, sig_rl, QuoteType::Linkable, vec![0; 16])?;
         enclave_stream.write_all(_quote.quote()).unwrap();
         enclave_stream.write_all(_quote.qe_report()).unwrap();
 
