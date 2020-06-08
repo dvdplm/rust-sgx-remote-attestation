@@ -66,9 +66,18 @@ impl IasClient {
             .unwrap();
         let mut resp = self.https_client.request(req).await?;
         if resp.status().as_u16() != 200 {
-            return Err(IasError::Attestation(AttestationError::Connection(
-                resp.status(),
-            )));
+            // Some error occurred, we have to dig deeper; the headers do not contain any
+            // useful info, it's in the body.
+            let mut body = Vec::new();
+            while let Some(chunk) = resp.body_mut().data().await {
+                body.write_all(&chunk.expect("data yes?")).expect("can write yes?");
+            }
+            let body_string = String::from_utf8_lossy(&body);
+            if body_string.contains("invalid subscription key") {
+                return Err(IasError::Attestation(AttestationError::InvalidAPIKey));
+            } else {
+               return Err(IasError::Attestation(AttestationError::Connection(resp.status(), )));
+            }
         }
         let mut body = Vec::new();
         while let Some(chunk) = resp.body_mut().data().await {

@@ -1,7 +1,7 @@
 use crate::config::SpConfig;
 use crate::error::SpRaError;
 use crate::ias::IasClient;
-use crate::{AttestationResult, SpRaResult};
+use crate::{AttestationResult, SpRaResult, AttestationError, IasError};
 use byteorder::{LittleEndian, ReadBytesExt};
 use ra_common::derive_secret_keys;
 use ra_common::msg::{RaMsg0, RaMsg1, RaMsg2, RaMsg3, RaMsg4, Spid};
@@ -197,11 +197,20 @@ impl<'a> SpRaContext<'a> {
         }
 
         // Verify attestation evidence
-        // TODO: use the secondary key as well
-        let attestation_result = self
+        let attestation_fut = self
             .ias_client
-            .verify_attestation_evidence(&msg3.quote, &self.config.primary_subscription_key)
-            .await?;
+            .verify_attestation_evidence(&msg3.quote, &self.config.primary_subscription_key);
+        let attestation_result =
+        match attestation_fut.await {
+            Ok(r) => r,
+            Err(IasError::Attestation(AttestationError::InvalidAPIKey)) => {
+                self
+                    .ias_client
+                    .verify_attestation_evidence(&msg3.quote, &self.config.secondary_subscription_key)
+                    .await?
+            },
+            Err(e) => return Err(e.into())
+        };
 
         if cfg!(feature = "verbose") {
             eprintln!("==============Attestation Result==============");

@@ -45,6 +45,7 @@ impl std::error::Error for SpRaError {}
 #[derive(Debug)]
 pub enum AttestationError {
     Connection(http::StatusCode),
+    InvalidAPIKey,
     MismatchedIASRootCertificate,
     InvalidIASCertificate,
     MissingIASHeader,
