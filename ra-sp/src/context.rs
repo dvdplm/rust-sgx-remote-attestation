@@ -32,7 +32,7 @@ pub struct SpRaContext<'a> {
 }
 
 impl<'a> SpRaContext<'a> {
-    pub fn init(mut config: SpConfig, enthropy: &'a mut impl EntropyCallback) -> SpRaResult<Self> {
+    pub fn init(mut config: SpConfig, entropy: &'a mut impl EntropyCallback) -> SpRaResult<Self> {
         assert!(config.linkable, "Only Linkable Quote supported");
         assert!(!config.random_nonce, "Random nonces not supported");
         assert!(
@@ -54,7 +54,7 @@ impl<'a> SpRaContext<'a> {
 
         let cert = X509Cert::new_from_pem_file(Path::new(&config.ias_root_cert_pem_path))?;
 
-        let mut rng = Rng::new(enthropy)?;
+        let mut rng = Rng::new(entropy)?;
         let key_exchange = OneWayAuthenticatedDHKE::generate_keypair(&mut rng)?;
 
         let mut sigstruct = File::open(Path::new(&config.sigstruct_path))?;

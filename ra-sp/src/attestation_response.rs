@@ -33,18 +33,17 @@ impl AttestationResponse {
     ) -> Result<Self, AttestationError> {
         Self::verify_response(root_ca_cert, &headers, &body[..])?;
 
-        let body: Value = {
-            let body = String::from_utf8(body).unwrap();
-            serde_json::from_str(&body).unwrap()
-        };
+        let body = serde_json::from_slice::<Value>(&body).map_err(|_| AttestationError::BadPayload )?;
 
         let h = |x: &HeaderValue| x.to_str().unwrap().to_owned();
         let b = |x: &str| x.to_owned();
+
+        // TODO: deserialization into a proper struct
         Ok(Self {
             // header
             advisory_ids: headers.get("advisory-ids").map(h),
             advisory_url: headers.get("advisory-url").map(h),
-            request_id: headers.get("request-id").map(h).unwrap(),
+            request_id: headers.get("request-id").map(h).ok_or(AttestationError::BadPayload)?,
             // body
             id: body["id"].as_str().unwrap().to_owned(),
             timestamp: body["timestamp"].as_str().unwrap().to_owned(),
@@ -68,32 +67,32 @@ impl AttestationResponse {
         // Split certificates
         let re = Regex::new(
             "(-----BEGIN .*-----\\n)\
-                            ((([A-Za-z0-9+/]{4})*\
-                              ([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)*\\n)+)\
-                            (-----END .*-----)",
-        )
-        .unwrap();
+                ((([A-Za-z0-9+/]{4})*\
+                ([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)*\\n)+)\
+                (-----END .*-----)",
+        ).expect("expecting the regex to be correct");
         let (mut certificate, mut ca_certificate) = {
             let c = headers
                 .get("x-iasreport-signing-certificate")
-                .unwrap()
+                .ok_or(AttestationError::MissingIASHeader)?
                 .to_str()
-                .unwrap();
-            let c = percent_encoding::percent_decode_str(c)
-                .decode_utf8()
-                .unwrap();
-            let c = re
+                .map_err(|_| AttestationError::BadPayload)
+                .map(|header_str| {
+                    percent_encoding::percent_decode_str(header_str)
+                        .decode_utf8()
+                        .map_err(|_| AttestationError::BadPayload)
+                })??;
+
+            let mut c = re
                 .find_iter(&c)
-                .map(|m| m.as_str().to_owned())
-                .collect::<Vec<String>>();
-            let mut c_iter = c.into_iter();
-            let mut certificate = c_iter.next().unwrap();
-            certificate.push('\0');
-            let certificate = X509Cert::new_from_pem(certificate.as_bytes()).unwrap();
-            let mut ca_certificate = c_iter.next().unwrap();
-            ca_certificate.push('\0');
-            let ca_certificate = X509Cert::new_from_pem(ca_certificate.as_bytes()).unwrap();
-            (certificate, ca_certificate)
+                .take(2)
+                .map(|m| {
+                    let mut s = m.as_str().to_owned();
+                    s.push('\0');
+                    X509Cert::new_from_pem(s.as_bytes()).map_err(|_| AttestationError::InvalidIASCertificate)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            (c.remove(0), c.remove(0))
         };
 
         // Check if the root certificate is the same as the SP-provided certificate
@@ -101,20 +100,20 @@ impl AttestationResponse {
             return Err(AttestationError::MismatchedIASRootCertificate);
         }
 
-        // Check if the certificate is signed by root CA
+        // Check that the certificate is signed by root CA
         certificate
             .verify_this_certificate(&mut ca_certificate)
             .map_err(|_| AttestationError::InvalidIASCertificate)?;
 
-        // Check if the signature is correct
+        // Check that the signature is correct
         let signature = base64::decode(
             headers
                 .get("x-iasreport-signature")
-                .unwrap()
+                .ok_or(AttestationError::MissingIASHeader)?
                 .to_str()
-                .unwrap(),
-        )
-        .unwrap();
+                .map_err(|_| AttestationError::BadPayload)?
+        ).map_err(|_| AttestationError::BadPayload)?;
+
         certificate
             .verify_signature(body, &signature[..])
             .map_err(|_| AttestationError::BadSignature)?;

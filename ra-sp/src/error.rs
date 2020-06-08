@@ -47,6 +47,8 @@ pub enum AttestationError {
     Connection(http::StatusCode),
     MismatchedIASRootCertificate,
     InvalidIASCertificate,
+    MissingIASHeader,
+    BadPayload,
     BadSignature,
 }
 
